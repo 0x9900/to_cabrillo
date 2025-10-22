@@ -9,21 +9,27 @@ import sys
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
+from typing import (Any, Callable, ClassVar, Dict, Optional, ParamSpec, Set,
+                    TextIO, TypeVar)
 
 import jinja2
 import toml
 
 from . import adif_parser
 
+P = ParamSpec('P')
+R = TypeVar('R')
+type FilterArg = str | int | float
+
 config = None           # pylint: disable=invalid-name
 jinja = jinja2.Environment()
 
 
-def register(name):
+def register(name: str) -> Callable[[Callable[P, R]], Callable[P, R]]:
   """Register new filters for jinja"""
-  def decorator(func):
+  def decorator(func: Callable[P, R]) -> Callable[P, R]:
     @wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
       return func(*args, **kwargs)
     jinja.filters[name] = wrapper
     return wrapper
@@ -31,49 +37,51 @@ def register(name):
 
 
 @register('lpad')
-def lpad_filter(value, width, fillchar=' '):
+def lpad_filter(value: FilterArg, width: int, fillchar: str = ' ') -> str:
   return str(value).rjust(width, fillchar)
 
 
 @register('rpad')
-def rpad_filter(value, width, fillchar=' '):
+def rpad_filter(value: FilterArg, width: int, fillchar: str = ' ') -> str:
   return str(value).ljust(width, fillchar)
 
 
 @register('date')
-def date_filter(value):
+def date_filter(value: str) -> str:
   return datetime.strptime(value, '%Y%m%d').date().strftime('%Y-%m-%d')
 
 
 class Config:
-  _instance = None
-  _config_keys = set(['header', 'footer', 'line'])
+  _instance: ClassVar[Optional['Config']] = None
+  _config_keys: ClassVar[Set[str]] = set(['header', 'footer', 'line'])
+  _config: ClassVar[Dict[str, Any]]
+  variables: ClassVar[Dict[str, Any]]
+  templates: ClassVar[Dict[str, str]]
 
-  def __new__(cls, filename):
+  def __new__(cls, filename: Path) -> 'Config':
     if cls._instance:
       return cls._instance
 
     with filename.open('r') as fd:
       cls._config = toml.load(fd)
-
-    cls.variables = cls._config['variables']
-    cls.templates = {}
-
-    for key, val in cls._config['templates'].items():
-      cls.templates[key] = val
-
-    if cls._config_keys & set(cls.templates.keys()) != cls._config_keys:
-      raise SystemError('Missing variables in the configuratin file')
+      cls.variables = cls._config['variables']
+      cls.templates = {}
+      for key, val in cls._config['templates'].items():
+        cls.templates[key] = val
+      if cls._config_keys & set(cls.templates.keys()) != cls._config_keys:
+        raise SystemError('Missing variables in the configuration file')
 
     obj = super().__new__(cls)
     cls._instance = obj
     return cls._instance
 
-  def __repr__(self):
+  def __repr__(self) -> str:
     return str(self._config)
 
 
-def process_lines(data, file):
+def process_lines(data: list, file: TextIO) -> None:
+  assert config is not None
+
   line = config.templates['line'].split('\n')
   line = ' '.join(line)
   template = jinja.from_string(line)
@@ -84,17 +92,19 @@ def process_lines(data, file):
     print(line, file=file)
 
 
-def make_header(file):
+def make_header(file: TextIO) -> None:
+  assert config is not None
   template = jinja.from_string(config.templates['header'])
   header = template.render(**config.variables)
   print(header, file=file, end='\n\n')
 
 
-def make_footer(file):
+def make_footer(file: TextIO) -> None:
+  assert config is not None
   print(config.templates['footer'], file=file)
 
 
-def gen_cabrillo(cab_file, adif):
+def gen_cabrillo(cab_file: Path, adif: list) -> None:
   def _gen_cabrillo(adif):
     make_header(fdout)
     process_lines(adif, fdout)
@@ -110,7 +120,7 @@ def gen_cabrillo(cab_file, adif):
       _gen_cabrillo(adif)
 
 
-def main():
+def main() -> None:
   global config      # pylint: disable=global-statement
 
   parser = argparse.ArgumentParser(description="ADIF to Cabrillo")
