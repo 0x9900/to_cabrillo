@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "to_cabrillo"
+version = "0.1.0"
+description = "A simple script that generate cabrillo files from an adif."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+authors = [
+    { name = "Fred C.", email = "w6bsd@bsdworld.org" }
+]
+classifiers = [
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: Telecommunications Industry",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "jinja2",
+    "toml"
+]
+
+[project.scripts]
+to_cabrillo = "to_cabrillo:main"
+
+[tool.setuptools]
+# Ensures the current directory is packaged
+packages = []
+py-modules = ["to_cabrillo"]
+
+
+[project.optional-dependencies]
+dev = [
+    "build",
+    "flake8",
+    "isort",
+    "pre-commit",
+    "pylint",
+    "ipython",
+    "ipdb"
+]
