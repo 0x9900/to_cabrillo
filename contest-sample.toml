@@ -1,0 +1,43 @@
+
+[variables]
+my_call = 'W6BSD'
+my_location = 'SCV'
+my_email = 'f4wfx@bsdworld.org'
+my_name = 'Fred C.'
+my_power = 'LOW'
+soapbox = 'RTTY contests are the best'
+
+[templates]
+header = '''START-OF-LOG: 3.0
+CONTEST: CQ-WW-SSB
+CALLSIGN: {{ my_call | upper }}
+LOCATION: {{ my_location | upper }}
+CATEGORY-OPERATOR: {{ operators or "SINGLE-OP" }}
+CATEGORY-TRANSMITTER: {{ transmitter or "ONE" }}
+CATEGORY-BAND: ALL
+CATEGORY-POWER: {{ my_power }}
+CATEGORY-MODE: RTTY
+CATEGORY-ASSISTED: NON-ASSISTED
+CATEGORY-STATION: FIXED
+CATEGORY-OVERLAY: CLASSIC
+EMAIL: {{ my_email }}
+NAME: {{ my_name }}
+{%- if soapbox %}
+SOAPBOX: {{ soapbox }}
+{% endif -%}
+'''
+
+footer = 'END-OF-LOG:'
+
+#### = 'QSO: ***** ** yyyy-mm-dd nnnn ************* nnn ** **** ************* nnn ** ****  n'
+line = '''QSO: {{ (FREQ * 1000) | int | lpad(5) }}
+{{ "PH" if MODE == "SSB" else MODE }}
+{{ DATE_TIME }}
+{{ STATION_CALLSIGN|rpad(6) }}
+599
+{{ APP_DXLOG_NR|int|lpad(4) }}
+{{ CALL|rpad(8) }}
+599
+{{ APP_DXLOG_RCVD|int|lpad(3) }}
+0
+'''

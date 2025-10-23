@@ -15,8 +15,7 @@ from typing import (Any, Callable, ClassVar, Dict, Optional, ParamSpec, Set,
 
 import jinja2
 import toml
-
-from .adif_parser import AData, ParseADIF
+from adif_parser import AData, ParseADIF
 
 P = ParamSpec('P')
 R = TypeVar('R')
@@ -85,6 +84,7 @@ def process_lines(data: AData, file: TextIO) -> None:
   line = config.templates['line'].split('\n')
   line = ' '.join(line)
   template = jinja.from_string(line)
+
   for row in data:
     start_date = datetime.strptime(row["QSO_DATE"] + ' ' + row["TIME_ON"], '%Y%m%d %H%M%S')
     row['DATE_TIME'] = start_date.strftime('%Y-%m-%d %H%M')
@@ -131,9 +131,14 @@ def main() -> None:
   opts = parser.parse_args()
 
   config = Config(opts.config)
-  adif = ParseADIF(opts.adif_file)
-  if adif.contacts is None:
-    raise SystemExit('No Contacts to process')
+  try:
+    with opts.adif_file.open('r') as fdi:
+      adif = ParseADIF(fdi)
+      if adif.contacts is None:
+        raise SystemExit('No Contacts to process')
+  except FileNotFoundError as err:
+    print(err, file=sys.stderr)
+    raise SystemExit('File not found')
 
   gen_cabrillo(opts.cabrillo_file, adif.contacts)
 
