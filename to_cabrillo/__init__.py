@@ -6,6 +6,7 @@
 # Distributed under terms of the BSD 3-Clause license.
 import argparse
 import sys
+from contextlib import ExitStack
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
@@ -15,7 +16,7 @@ from typing import (Any, Callable, ClassVar, Dict, Optional, ParamSpec, Set,
 import jinja2
 import toml
 
-from . import adif_parser
+from .adif_parser import AData, ParseADIF
 
 P = ParamSpec('P')
 R = TypeVar('R')
@@ -79,9 +80,8 @@ class Config:
     return str(self._config)
 
 
-def process_lines(data: list, file: TextIO) -> None:
+def process_lines(data: AData, file: TextIO) -> None:
   assert config is not None
-
   line = config.templates['line'].split('\n')
   line = ' '.join(line)
   template = jinja.from_string(line)
@@ -104,20 +104,18 @@ def make_footer(file: TextIO) -> None:
   print(config.templates['footer'], file=file)
 
 
-def gen_cabrillo(cab_file: Path, adif: list) -> None:
-  def _gen_cabrillo(adif):
+def gen_cabrillo(cab_file: Path, adif: AData) -> None:
+  with ExitStack() as stack:
+    if cab_file == Path('-'):
+      fdout = sys.stdout
+    else:
+      outfile = cab_file.expanduser().absolute()
+      print(f'Write {outfile}')
+      fdout = stack.enter_context(outfile.open('w', encoding='UTF-8'))
+
     make_header(fdout)
     process_lines(adif, fdout)
     make_footer(fdout)
-
-  if cab_file == Path('-'):
-    fdout = sys.stdout
-    _gen_cabrillo(adif)
-  else:
-    outfile = cab_file.expanduser().absolute()
-    print(f'Write {outfile}')
-    with outfile.open('w', encoding='UTF-8') as fdout:
-      _gen_cabrillo(adif)
 
 
 def main() -> None:
@@ -133,9 +131,11 @@ def main() -> None:
   opts = parser.parse_args()
 
   config = Config(opts.config)
+  adif = ParseADIF(opts.adif_file)
+  if adif.contacts is None:
+    raise SystemExit('No Contacts to process')
 
-  adif = adif_parser.ParseADIF(opts.adif_file)
-  gen_cabrillo(opts.cabrillo_file, adif.adif_data)
+  gen_cabrillo(opts.cabrillo_file, adif.contacts)
 
 
 if __name__ == "__main__":
