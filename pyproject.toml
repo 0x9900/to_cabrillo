@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "to_cabrillo"
-version = "0.1.0"
+version = "0.1.1"
 description = "A simple script that generate cabrillo files from an adif."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -30,11 +30,15 @@ dependencies = [
 [project.scripts]
 to_cabrillo = "to_cabrillo:main"
 
+[project.urls]
+  Documentation = "https://github.com/0x9900/to_cabrillo/"
+  Source = "https://github.com/0x9900/to_cabrillo"
+  Tracker = "https://github.com/0x9900/to_cabrillo/issues"
+
 [tool.setuptools]
 # Ensures the current directory is packaged
 packages = []
 py-modules = ["to_cabrillo"]
-
 
 [project.optional-dependencies]
 dev = [
