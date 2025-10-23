@@ -102,7 +102,7 @@ Fred C. (0x9900)
 
 - [Cabrillo Format Specification](https://wwrof.org/cabrillo/)
 - [ADIF Specification](https://adif.org/)
-- [ARRL Contest Information](https://www.arrl.org/contests)
+- [CQ World Wide Contest Information](https://cqww.com)
 
 ## Support
 

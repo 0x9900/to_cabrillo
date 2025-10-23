@@ -7,7 +7,7 @@ name = "to_cabrillo"
 version = "0.1.0"
 description = "A simple script that generate cabrillo files from an adif."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 license = {file = "LICENSE"}
 authors = [
     { name = "Fred C.", email = "w6bsd@bsdworld.org" }
