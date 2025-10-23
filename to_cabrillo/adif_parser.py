@@ -7,6 +7,7 @@
 
 import re
 from pathlib import Path
+from typing import Any, Callable, Dict, List, TypeAlias, TypeVar
 
 # Pre-compiled regexes (moved outside class for reuse)
 TAG_PATTERN = re.compile(r'<([^:>]+):(\d+)>([^<]*)')
@@ -15,7 +16,18 @@ EOR_PATTERN = re.compile(r'<eor>', re.IGNORECASE)
 WHITESPACE_PATTERN = re.compile(r'\s+')
 
 # Set for O(1) lookups instead of tuple checks
+FLOAT_TAGS = frozenset(['FREQ', 'FRED_RX', 'DXCC', 'MY_CQ_ZONE', 'MY_ITU_ZONE'])
 NON_FLOAT_TAGS = frozenset(['BAND', 'QSO_DATE', 'TIME_ON', 'QSO_DATE_OFF', 'TIME_OFF'])
+
+T = TypeVar('T')
+AData: TypeAlias = List[Dict[Any, Any]]
+
+
+def try_convert(val: Any, converter: Callable[[Any], T]) -> Any | T:
+  try:
+    return converter(val)
+  except ValueError:
+    return val
 
 
 class ParseADIF:
@@ -23,32 +35,36 @@ class ParseADIF:
     if isinstance(filename, str):
       filename = Path(filename)
 
+    self._header: AData | None
+    self._data: AData | None
+
     with filename.open('r', encoding='utf8') as fdi:
       text = fdi.read()
       self.parse_adif(text)
 
-  def __iter__(self):
-    yield self.adif_data
+  @property
+  def header(self) -> AData | None:
+    return self._header
 
-  def adif(self):
-    return self.adif_data
+  @property
+  def contacts(self) -> AData | None:
+    return self._data
 
-  def parse_adif(self, adif_data):
+  def parse_adif(self, text: str) -> None:
     # Normalize whitespace in one pass
-    adif_data = WHITESPACE_PATTERN.sub(' ', adif_data.strip())
+    text = WHITESPACE_PATTERN.sub(' ', text.strip())
 
     # Split on <eoh>
-    parts = EOH_PATTERN.split(adif_data, maxsplit=1)
+    parts = EOH_PATTERN.split(text, maxsplit=1)
 
     if len(parts) == 2:
-      self.header = ParseADIF.parse_lines(parts[0])
-      self.adif_data = ParseADIF.parse_lines(parts[1])
+      self._header = ParseADIF.parse_lines(parts[0])
+      self._data = ParseADIF.parse_lines(parts[1])
     else:
-      self.header = {}
-      self.adif_data = ParseADIF.parse_lines(parts[0])
+      self._data = ParseADIF.parse_lines(parts[0])
 
   @staticmethod
-  def parse_lines(data: str) -> list:
+  def parse_lines(data: str) -> AData:
     records = []
 
     # Split records based on <eor>
@@ -65,11 +81,10 @@ class ParseADIF:
           continue
 
         tag_name = tag_name.strip().upper()
-        if tag_name not in NON_FLOAT_TAGS:
-          try:
-            value = float(value)
-          except ValueError:
-            pass  # Keep as string if conversion fails
+        if tag_name in FLOAT_TAGS:
+          value = try_convert(value, int)
+        elif tag_name not in NON_FLOAT_TAGS:
+          value = try_convert(value, float)
 
         record[tag_name] = value
 
