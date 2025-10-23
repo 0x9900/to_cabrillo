@@ -5,6 +5,7 @@
 #
 # Distributed under terms of the BSD 3-Clause license.
 import argparse
+import os
 import sys
 from contextlib import ExitStack
 from datetime import datetime
@@ -130,7 +131,12 @@ def main() -> None:
                       help='Cabrillo filename (output)')
   opts = parser.parse_args()
 
-  config = Config(opts.config)
+  try:
+    config = Config(opts.config)
+  except FileNotFoundError as err:
+    print(err, file=sys.stderr)
+    sys.exit(os.EX_IOERR)
+
   try:
     with opts.adif_file.open('r') as fdi:
       adif = ParseADIF(fdi)
